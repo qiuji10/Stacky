@@ -110,7 +110,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 31768ae9882ddd44583981bd4a04cf38, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  pointA: {fileID: 300268212754610047, guid: a081a92ea453a38498e85a8140321f0c, type: 3}
-  pointB: {fileID: 513580094534380715, guid: 2d40683183ec5ac4fa2fea54249e50d8, type: 3}
-  cubeType: 1
   speed: 0.6
+  stop: 0
+  pointA: {fileID: 3914942123831604612, guid: a081a92ea453a38498e85a8140321f0c, type: 3}
+  pointB: {fileID: 648045879539986111, guid: 2d40683183ec5ac4fa2fea54249e50d8, type: 3}
+  cubeType: 1
