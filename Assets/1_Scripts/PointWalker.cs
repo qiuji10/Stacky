@@ -26,7 +26,10 @@ public class PointWalker : MonoBehaviour
 
     private void Start()
     {
-        cube.position = pointA.position;
+        if (cubeType == CubeType.xCube)
+            cube.position = pointB.position;
+        else if (cubeType == CubeType.zCube)
+            cube.position = pointA.position;
     }
 
     private void Update()
