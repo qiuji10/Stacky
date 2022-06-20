@@ -4,13 +4,20 @@ using UnityEngine;
 
 public class PointWalker : MonoBehaviour
 {
+    public enum CubeType { xCube, zCube }
+
+    [SerializeField] float speed;
+    public bool stop;
+
     [SerializeField] Transform pointA;
     [SerializeField] Transform pointB;
     Transform cube;
 
-    Vector3 direction;
+    public Transform PA { get { return pointA; } set { pointA = value; } }
+    public Transform PB { get { return pointB; } set { pointB = value; } }
 
-    [SerializeField] float speed;
+    public CubeType cubeType;
+    private Vector3 direction;
 
     private void Awake()
     {
@@ -24,17 +31,30 @@ public class PointWalker : MonoBehaviour
 
     private void Update()
     {
-        if (cube.position.x >= pointA.position.x)
+        if (cubeType == CubeType.xCube)
         {
-            Debug.Log("Go to left");
-            direction = new Vector3(pointB.position.x, cube.position.y, pointB.position.z);
+            if (cube.position.x >= pointA.position.x)
+            {
+                direction = new Vector3(pointB.position.x, 0, 0);
+            }
+            else if (cube.position.x <= pointB.position.x)
+            {
+                direction = new Vector3(pointA.position.x, 0, 0);
+            }
         }
-        else if (cube.position.x <= pointB.position.x)
+        else if (cubeType == CubeType.zCube)
         {
-            Debug.Log("Go to right");
-            direction = new Vector3(pointA.position.x, cube.position.y, pointA.position.z);
+            if (cube.position.z >= pointA.position.z)
+            {
+                direction = new Vector3(pointA.position.z, 0, 0);
+            }
+            else if (cube.position.z <= pointB.position.z)
+            {
+                direction = new Vector3(pointB.position.z, 0, 0);
+            }
         }
 
-        cube.Translate(direction * speed * Time.deltaTime);
+        if (!stop)
+            cube.Translate(direction * speed * Time.deltaTime);
     }
 }
