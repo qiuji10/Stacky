@@ -21,7 +21,10 @@ public class CubeBehaviour : MonoBehaviour
     void Update()
     {
         if (Input.GetMouseButtonDown(0))
+        {
+            gameObject.name = gm.index.ToString();
             stop = true;
+        }
 
         if (!stop)
         {
@@ -59,6 +62,7 @@ public class CubeBehaviour : MonoBehaviour
 
                 SpawnNewCube(gm.xPrefab);
             }
+            gm.index++;
             enabled = false;
         }
     }
@@ -130,25 +134,29 @@ public class CubeBehaviour : MonoBehaviour
         else if (a < 0 && b > 0)
         {
             Debug.Log("2");
-            return Mathf.Abs(a) - b;
+            return Mathf.Abs(a) + b;
+        }
+        else if (a > 0 && b < 0)
+        {
+            Debug.Log("3");
+            return Mathf.Abs(b) + a;
         }
         else if (a < 0 && b <= 0)
         {
-            
             if (a < b)
             {
-                Debug.Log("3a");
+                Debug.Log("4a");
                 return Mathf.Abs(a) + b;
             }
             else
             {
-                Debug.Log("3b");
+                Debug.Log("4b");
                 return Mathf.Abs(b) + a;
             }
         }
         else
         {
-            Debug.Log("4");
+            Debug.Log("5");
             return 0;
         }
     }
