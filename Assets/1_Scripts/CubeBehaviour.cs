@@ -110,8 +110,8 @@ public class CubeBehaviour : MonoBehaviour
     }
 
     /// <summary>
-    /// Calculate real distance, 
-    /// a is current cube x, b is previous cube x
+    /// Calculate real distance between a and b, 
+    /// a is current cube x/z position, b is previous cube x/z position.
     /// </summary>
     /// <param name="a"></param>
     /// <param name="b"></param>
