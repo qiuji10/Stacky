@@ -11,19 +11,22 @@ public class CubeBehaviour : MonoBehaviour
     public Vector3 pointA, pointB;
 
     private GameManager gm;
+    private Rigidbody rb;
     private bool stop, isLeft;
 
     private void Awake()
     {
         gm = FindObjectOfType<GameManager>();
+        rb = GetComponent<Rigidbody>();
     }
 
-    void Update()
+    private void Update()
     {
         if (Input.GetMouseButtonDown(0))
         {
-            gameObject.name = gm.index.ToString();
             stop = true;
+            Vector3 pos = gm.camObj.transform.position;
+            gm.camObj.transform.position = new Vector3(pos.x, pos.y + 1, pos.z);
         }
 
         if (!stop)
@@ -36,13 +39,21 @@ public class CubeBehaviour : MonoBehaviour
             if (isX)
             {
                 float distance = CalDistance(transform.position.x, prevCube.position.x);
+
+                if (distance > transform.localScale.x)
+                {
+                    rb.useGravity = true;
+                    gm.EndGame();
+                    enabled = false;
+                    return;
+                }
+
                 float newXSize =  transform.localScale.x - distance;
 
                 transform.localScale = new Vector3(newXSize, 1, transform.localScale.z);
-
                 //here should add combo, and if distance  < 0.5 also counted as 0
                 if (distance == 0)
-                    transform.position = new Vector3(transform.position.x, transform.position.y, transform.position.z);
+                    transform.position = new Vector3(prevCube.position.x, transform.position.y, prevCube.position.z);
                 else
                     transform.position = new Vector3((transform.position.x + prevCube.position.x) / 2, transform.position.y, transform.position.z);
 
@@ -51,18 +62,27 @@ public class CubeBehaviour : MonoBehaviour
             else
             {
                 float distance = CalDistance(transform.position.z, prevCube.position.z);
+
+                if (distance > transform.localScale.x)
+                {
+                    rb.useGravity = true;
+                    gm.EndGame();
+                    enabled = false;
+                    return;
+                }
+
                 float newXSize = transform.localScale.x - distance;
 
                 transform.localScale = new Vector3(newXSize, 1, transform.localScale.z);
 
                 if (distance == 0)
-                    transform.position = new Vector3(transform.position.x, transform.position.y, transform.position.z);
+                    transform.position = new Vector3(prevCube.position.x, transform.position.y, prevCube.position.z);
                 else
                     transform.position = new Vector3(transform.position.x, transform.position.y, (transform.position.z + prevCube.position.z) / 2);
 
                 SpawnNewCube(gm.xPrefab);
             }
-            gm.index++;
+            gm.LevelUp();
             enabled = false;
         }
     }
@@ -122,41 +142,34 @@ public class CubeBehaviour : MonoBehaviour
         {
             if (a > b)
             {
-                Debug.Log("1a");
                 return a - b;
             }
             else
             {
-                Debug.Log("1b");
                 return b - a;
             }
         }
         else if (a < 0 && b > 0)
         {
-            Debug.Log("2");
             return Mathf.Abs(a) + b;
         }
         else if (a > 0 && b < 0)
         {
-            Debug.Log("3");
             return Mathf.Abs(b) + a;
         }
         else if (a < 0 && b <= 0)
         {
             if (a < b)
             {
-                Debug.Log("4a");
                 return Mathf.Abs(a) + b;
             }
             else
             {
-                Debug.Log("4b");
                 return Mathf.Abs(b) + a;
             }
         }
         else
         {
-            Debug.Log("5");
             return 0;
         }
     }
@@ -171,6 +184,14 @@ public class CubeBehaviour : MonoBehaviour
         else
             cube.transform.position = new Vector3(cube.transform.position.x, transform.position.y + 1, transform.position.z);
 
+        gm.UpdateColor();
+        cube.GetComponent<MeshRenderer>().material.color = gm.cubeColor;
         cube.GetComponent<CubeBehaviour>().prevCube = transform;
+    }
+
+    private void Resetter()
+    {
+        rb.useGravity = false;
+        enabled = true;
     }
 }
