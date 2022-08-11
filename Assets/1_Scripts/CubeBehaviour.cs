@@ -40,6 +40,9 @@ public class CubeBehaviour : MonoBehaviour
             {
                 float distance = CalDistance(transform.position.x, prevCube.position.x);
 
+                if (gm.isGod || distance < 0.35f)
+                    distance = 0;
+
                 if (distance > transform.localScale.x)
                 {
                     rb.useGravity = true;
@@ -52,6 +55,9 @@ public class CubeBehaviour : MonoBehaviour
 
                 transform.localScale = new Vector3(newXSize, 1, transform.localScale.z);
                 //here should add combo, and if distance  < 0.5 also counted as 0
+                Debug.Log(distance);
+                
+
                 if (distance == 0)
                     transform.position = new Vector3(prevCube.position.x, transform.position.y, prevCube.position.z);
                 else
@@ -62,6 +68,8 @@ public class CubeBehaviour : MonoBehaviour
             else
             {
                 float distance = CalDistance(transform.position.z, prevCube.position.z);
+                if (gm.isGod || distance < 0.35f)
+                    distance = 0;
 
                 if (distance > transform.localScale.x)
                 {
@@ -70,7 +78,7 @@ public class CubeBehaviour : MonoBehaviour
                     enabled = false;
                     return;
                 }
-
+                Debug.Log(distance);
                 float newXSize = transform.localScale.x - distance;
 
                 transform.localScale = new Vector3(newXSize, 1, transform.localScale.z);
