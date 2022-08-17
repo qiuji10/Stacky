@@ -1,15 +1,47 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using Random = UnityEngine.Random;
+using Cinemachine;
+using TMPro;
 
 public class GameManager : MonoBehaviour
 {
-    public GameObject xPrefab, yPrefab;
-	public GameObject camObj, baseObj, firstCube;
+    public GameObject xPrefab, yPrefab, bonusPrefab;
+	public GameObject camObj, baseParent, baseObj, firstCube;
 
 	[Header("GodMode")]
 	public bool isGod;
+
+	[Header("Menu Settings")]
+	[SerializeField] private CanvasGroup menuCanvas;
+	[SerializeField] private CanvasGroup gameplayCanvas;
+	[SerializeField] private float menuFadeSpeed;
+	public static bool isFirstTime;
+
+	[Header("Game Base Settings")]
+	public int level;
+	public int combo;
+	[SerializeField] private int rotationLevel;
+	[SerializeField] private bool isSpeeded;
+	[SerializeField] private float sceneTransitionTime;
+	public bool IsSpeeded { get { return isSpeeded; } }
+
+	[Header("Rotation Phase Settings")]
+	[SerializeField] private bool rotatePhase;
+	[SerializeField] private float rotationSpeed;
+	private bool changeRotationDir;
+	public bool RotatePhase { get { return rotatePhase; } }
+	public bool ChangeRotationDir { get { return changeRotationDir; } set { changeRotationDir = value; } }
+
+	[Header("Camera Settings")]
+	public float camHeightPerBlock;
+	[SerializeField] private float camBlendSpeed;
+	public CinemachineVirtualCamera vcam;
+	public CinemachineVirtualCamera vcam2;
+	private CinemachineTargetGroup targetGrp;
 
 	[Header("Color Settings")]
 	public Color cubeColor;
@@ -19,29 +51,42 @@ public class GameManager : MonoBehaviour
 	[Range(0, 1)] public float g;
 	[Range(0, 1)] public float b;
 
-	public int level;
-
 	[SerializeField] private float deviation;
 	[SerializeField] private float adjustor;
 
-	private bool rReach, gReach, bReach, bottomReach, topReach, endGame;
+	private bool rReach, gReach, bReach, topReach, endGame;
 
 	[Header("BG Color")]
 	[SerializeField] private Renderer bgRender;
 	[SerializeField] private Color topColor;
 	[SerializeField] private Color nextTopColor;
 	[SerializeField] private Color bottomColor;
-	[SerializeField] private Color nextBottomColor;
+	[SerializeField] private BgColorData colorData;
+	private float timePassed;
+	private float transTime = 5f;
 
-	
+	[Header("UI Settings")]
+	[SerializeField] private TMP_Text scoreText;
+	[SerializeField] private GameObject pauseUI;
+	[SerializeField] private GameObject tapText;
 
-	//private void Awake()
- //   {
-	//	camObj = Camera.main.gameObject;
-	//}
+	[Header("Buttons Settings")]
+	[SerializeField] private Button startGameButton;
+	[SerializeField] private Button nextGameButton;
+
+	[Header("Materials")]
+	public Material baseMat;
+
+    private void Awake()
+    {
+        targetGrp = FindObjectOfType<CinemachineTargetGroup>();
+	}
 
     private void Start()
     {
+		StartCoroutine(IntroFade());
+		StartCoroutine(SetTransCamPriority());
+
 		r = Random.Range(0.0f, 1.0f);
 		g = Random.Range(0.0f, 1.0f);
 		b = Random.Range(0.0f, 1.0f);
@@ -72,22 +117,51 @@ public class GameManager : MonoBehaviour
 
 		nextTopColor = new Color(r, g, b, 1.0f);
 
-		r = Random.Range(0.0f, 1.0f);
-		g = Random.Range(0.0f, 1.0f);
-		b = Random.Range(0.0f, 1.0f);
-
-		nextBottomColor = new Color(r, g, b, 1.0f);
-
 		baseObj.GetComponent<Renderer>().material.color = cubeColor;
 		firstCube.GetComponent<Renderer>().material.color = cubeColor;
 
-		bgRender.material.SetColor("_Color1", bottomColor);
-		bgRender.material.SetColor("_Color2", topColor);
-	}
+        int num = PlayerPrefs.GetInt("played");
+
+        if (num == 0)
+        {
+            bgRender.material.SetColor("_Color1", bottomColor);
+            bgRender.material.SetColor("_Color2", topColor);
+            Debug.Log("first");
+            PlayerPrefs.SetInt("played", 1);
+        }
+        else
+        {
+            bgRender.material.SetColor("_Color1", colorData.bottomColor);
+            bgRender.material.SetColor("_Color2", colorData.topColor);
+            StartCoroutine(SceneTransBGColorLerp());
+        }
+    }
 
     private void OnValidate()
     {
 		cubeColor = new Color(r, g, b, 1.0f);
+	}
+
+    private void Update()
+    {
+		if (rotatePhase)
+        {
+			if (changeRotationDir)
+            {
+				baseParent.transform.eulerAngles += new Vector3(0, -rotationSpeed, 0);
+			}
+			else
+            {
+				baseParent.transform.eulerAngles += new Vector3(0, rotationSpeed, 0);
+			}
+		}
+
+	}
+
+	public void StartGame()
+    {
+		firstCube.SetActive(true);
+		StartCoroutine(MenuFade(true));
 	}
 
 	public void UpdateColor()
@@ -129,86 +203,15 @@ public class GameManager : MonoBehaviour
 			cubeColor.b = cubeColor.b - adjustor;
 		#endregion
 		#endregion
-
-		#region Bottom Region
-		if (bottomColor.r < (nextBottomColor.r + deviation) && bottomColor.r > (nextBottomColor.r - deviation))
-		{
-			bottomReach = true;
-			bottomColor.r = nextBottomColor.r;
-		}
-		else if (nextBottomColor.r > bottomColor.r)
-			bottomColor.r = bottomColor.r + adjustor;
-		else if (nextBottomColor.r < bottomColor.r)
-			bottomColor.r = bottomColor.r - adjustor;
-
-		if (bottomColor.g < (nextBottomColor.g + deviation) && bottomColor.g > (nextBottomColor.g - deviation))
-		{
-			bottomReach = true;
-			bottomColor.g = nextBottomColor.g;
-		}
-		else if (nextBottomColor.g > bottomColor.g)
-			bottomColor.g = bottomColor.g + adjustor;
-		else if (nextBottomColor.g < bottomColor.g)
-			bottomColor.g = bottomColor.g - adjustor;
-
-		if (bottomColor.b < (nextBottomColor.b + deviation) && bottomColor.b > (nextBottomColor.b - deviation))
-		{
-			bottomReach = true;
-			bottomColor.b = nextBottomColor.b;
-		}
-		else if (nextBottomColor.b > bottomColor.b)
-			bottomColor.b = bottomColor.r + adjustor;
-		else if (nextBottomColor.b < bottomColor.b)
-			bottomColor.b = bottomColor.b - adjustor;
-		#endregion
-
-		#region Top Region
-		if (topColor.r < (nextTopColor.r + deviation) && topColor.r > (nextTopColor.r - deviation))
-		{
-			topReach = true;
-			topColor.r = nextTopColor.r;
-		}
-		else if (nextTopColor.r > topColor.r)
-			topColor.r = topColor.r + adjustor;
-		else if (nextTopColor.r < topColor.r)
-			topColor.r = topColor.r - adjustor;
-
-		if (topColor.g < (nextTopColor.g + deviation) && topColor.g > (nextTopColor.g - deviation))
-		{
-			topReach = true;
-			topColor.g = nextTopColor.g;
-		}
-		else if (nextTopColor.g > topColor.g)
-			topColor.g = topColor.g + adjustor;
-		else if (nextTopColor.g < topColor.g)
-			topColor.g = topColor.g - adjustor;
-
-		if (topColor.b < (nextTopColor.b + deviation) && topColor.b > (nextTopColor.b - deviation))
-		{
-			topReach = true;
-			topColor.b = nextTopColor.b;
-		}
-		else if (nextTopColor.b > topColor.b)
-			topColor.b = topColor.r + adjustor;
-		else if (nextTopColor.b < topColor.b)
-			topColor.b = topColor.b - adjustor;
-		#endregion
 		
-		bgRender.material.SetColor("_Color1", topColor);
-		bgRender.material.SetColor("_Color2", bottomColor);
+		StartCoroutine(BgColorLerp());
+
+		bgRender.material.SetColor("_Color1", bottomColor);
+		bgRender.material.SetColor("_Color2", topColor);
 
 		if (rReach && gReach && bReach)
         {
 			NextColor();
-		}
-
-		if (bottomReach)
-		{
-			r = Random.Range(0.0f, 1.0f);
-			g = Random.Range(0.0f, 1.0f);
-			b = Random.Range(0.0f, 1.0f);
-			bottomReach = false;
-			nextBottomColor = new Color(r, g, b, 1.0f);
 		}
 
 		if (topReach)
@@ -232,15 +235,182 @@ public class GameManager : MonoBehaviour
 		nextColor = new Color(r, g, b, 1.0f);
 	}
 
+    IEnumerator SceneTransBGColorLerp()
+    {
+		while (timePassed < transTime)
+        {
+			timePassed += Time.deltaTime;
+			colorData.topColor = Color.Lerp(colorData.topColor, topColor, timePassed / transTime);
+			colorData.bottomColor = Color.Lerp(colorData.bottomColor, bottomColor, timePassed / transTime);
+			bgRender.material.SetColor("_Color1", colorData.bottomColor);
+			bgRender.material.SetColor("_Color2", colorData.topColor);
+			yield return null;
+		}
+		timePassed = 0f;
+		yield return null;
+	}
+
+    IEnumerator BgColorLerp() 
+	{
+		topColor = Color.Lerp(topColor, nextTopColor, 5 * Time.deltaTime);
+		if (topColor.g < (nextTopColor.g + deviation + 0.05) && topColor.g > (nextTopColor.g - deviation - 0.05))
+		{
+			topReach = true;
+		}
+
+		bottomColor = Color.Lerp(bottomColor, topColor, 3 * Time.deltaTime);
+
+		yield return null;
+	}
+
 	public void LevelUp()
 	{
 		level++;
-		Debug.Log(level);
+		scoreText.text = level.ToString();
+
+		Vector3 pos = camObj.transform.position;
+		camObj.transform.position = new Vector3(pos.x, pos.y + camHeightPerBlock, pos.z);
+		vcam.transform.position = new Vector3(18.5f, vcam.transform.position.y + camHeightPerBlock, -18.5f);
+
+		// Trigger Base Rotation
+        if (RotatePhase)
+        {
+            ChangeRotationDir = !ChangeRotationDir;
+        }
+		else
+        {
+			if (level == rotationLevel)
+            {
+				rotatePhase = true;
+			}
+		}
+
+		// Speed Up Rotation After lvl 40
+		if (level == 40)
+		{
+			rotationSpeed *= 5;
+		}
+
+		// Every 25 levels change cube moving speed
+		if (level % 25 == 0)
+        {
+			isSpeeded = !isSpeeded;
+		}
+
+		
 	}
+
+	public void GodMode()
+    {
+		isGod = !isGod;
+    }
 
 	public void EndGame()
     {
 		endGame = true;
+		nextGameButton.interactable = true;
+		targetGrp.AddMember(baseObj.transform, 1, 0);
+		colorData.bottomColor = bottomColor;
+		colorData.topColor = topColor;
+		StartCoroutine(EnableNextGameButton());
 		Debug.Log(endGame);
+	}
+
+	public void NextGame()
+    {
+		vcam2.Priority = 11;
+		StartCoroutine(ReloadScene(true));
+	}
+
+	public IEnumerator MenuFade(bool fadeToGame)
+    {
+		if (fadeToGame)
+        {
+			gameplayCanvas.gameObject.SetActive(true);
+
+			while (menuCanvas.alpha > 0)
+			{
+				menuCanvas.alpha -= menuFadeSpeed;
+				gameplayCanvas.alpha += menuFadeSpeed;
+				yield return null;
+			}
+
+			menuCanvas.gameObject.SetActive(false);
+		}
+		else
+        {
+			menuCanvas.gameObject.SetActive(true);
+
+			while (gameplayCanvas.alpha > 0)
+			{
+				gameplayCanvas.alpha -= menuFadeSpeed;
+				menuCanvas.alpha += menuFadeSpeed;
+				yield return null;
+			}
+
+			gameplayCanvas.gameObject.SetActive(false);
+		}
+		
+    }
+
+	public IEnumerator IntroFade()
+    {
+		menuCanvas.gameObject.SetActive(true);
+
+		while (menuCanvas.alpha < 1)
+		{
+			menuCanvas.alpha += menuFadeSpeed;
+			yield return null;
+		}
+	}
+
+	public void PauseGame()
+    {
+		pauseUI.SetActive(true);
+		gameplayCanvas.gameObject.SetActive(false);
+		Time.timeScale = 0f;
+	}
+
+	public void ResumeGame()
+    {
+		Time.timeScale = 1f;
+		gameplayCanvas.gameObject.SetActive(true);
+		pauseUI.SetActive(false);
+	}
+
+	public void BackMenu()
+    {
+		Time.timeScale = 1f;
+		pauseUI.SetActive(false);
+		menuCanvas.gameObject.SetActive(false);
+		vcam2.Priority = 11;
+		colorData.bottomColor = bottomColor;
+		colorData.topColor = topColor;
+		//StartCoroutine(MenuFade(false));
+		StartCoroutine(ReloadScene(false));
+
+	}
+
+	private IEnumerator ReloadScene(bool needFade)
+    {
+		if (needFade)
+			StartCoroutine(MenuFade(false));
+
+		yield return new WaitForSeconds(sceneTransitionTime);
+		SceneManager.LoadScene(0);
+	}
+
+	private IEnumerator SetTransCamPriority()
+    {
+		yield return new WaitForSeconds(1);
+		vcam2.Priority = 9;
+		yield return new WaitForSeconds(2);
+		startGameButton.interactable = true;
+	}
+
+	private IEnumerator EnableNextGameButton()
+    {
+		yield return new WaitForSeconds(1.8f);
+		nextGameButton.gameObject.SetActive(true);
 	}
 }

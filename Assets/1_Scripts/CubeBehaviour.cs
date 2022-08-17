@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class CubeBehaviour : MonoBehaviour
 {
@@ -11,22 +12,30 @@ public class CubeBehaviour : MonoBehaviour
     public Vector3 pointA, pointB;
 
     private GameManager gm;
+    private Pooler pooler;
     private Rigidbody rb;
     private bool stop, isLeft;
 
     private void Awake()
     {
         gm = FindObjectOfType<GameManager>();
+        pooler = FindObjectOfType<Pooler>();
         rb = GetComponent<Rigidbody>();
+    }
+
+    private void OnEnable()
+    {
+        if (gm.IsSpeeded)
+            speed = 27;
+        else
+            speed = 20;
     }
 
     private void Update()
     {
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && !IsPointerOverUIObject())
         {
             stop = true;
-            Vector3 pos = gm.camObj.transform.position;
-            gm.camObj.transform.position = new Vector3(pos.x, pos.y + 1, pos.z);
         }
 
         if (!stop)
@@ -38,15 +47,29 @@ public class CubeBehaviour : MonoBehaviour
             speed = 0;
             if (isX)
             {
-                float distance = CalDistance(transform.position.x, prevCube.position.x);
+                float distance = CalDistance(transform.localPosition.x, prevCube.localPosition.x);
 
-                if (gm.isGod || distance < 0.35f)
+                if (gm.isGod)
                     distance = 0;
+
+                if (distance < 0.35f || gm.isGod)
+                {
+                    distance = 0;
+                    Handheld.Vibrate();
+                    gm.combo += 1;
+                }
+                else
+                {
+                    gm.combo = 0;
+                }
 
                 if (distance > transform.localScale.x)
                 {
                     rb.useGravity = true;
+                    rb.isKinematic = false;
+                    gameObject.layer = LayerMask.NameToLayer("DropBox");
                     gm.EndGame();
+                    gameObject.isStatic = true;
                     enabled = false;
                     return;
                 }
@@ -54,44 +77,125 @@ public class CubeBehaviour : MonoBehaviour
                 float newXSize =  transform.localScale.x - distance;
 
                 transform.localScale = new Vector3(newXSize, 1, transform.localScale.z);
-                //here should add combo, and if distance  < 0.5 also counted as 0
-                Debug.Log(distance);
-                
 
                 if (distance == 0)
-                    transform.position = new Vector3(prevCube.position.x, transform.position.y, prevCube.position.z);
+                    transform.localPosition = new Vector3(prevCube.localPosition.x, transform.localPosition.y, prevCube.localPosition.z);
                 else
-                    transform.position = new Vector3((transform.position.x + prevCube.position.x) / 2, transform.position.y, transform.position.z);
+                    transform.localPosition = new Vector3((transform.localPosition.x + prevCube.localPosition.x) / 2f, transform.localPosition.y, transform.localPosition.z);
 
-                SpawnNewCube(gm.yPrefab);
+                if (distance != 0)
+                {
+                    Transform dropBox = pooler.GetFromPool(CubeType.dropCube);
+
+                    dropBox.eulerAngles = Vector3.zero;
+
+                    if (transform.position.x > prevCube.position.x)
+                    {
+                        //Debug.Log($"{transform.position.x} \n {prevCube.position.x} \n {distance + (newXSize / 2)}");
+                        dropBox.position = new Vector3(transform.position.x + (distance + (newXSize / 2f)), transform.position.y, transform.position.z);
+                    }
+                    else
+                    {
+                        //Debug.Log($"{transform.position.x} \n {prevCube.position.x} \n {distance + (newXSize / 2)}");
+                        dropBox.position = new Vector3(transform.position.x - (distance + (newXSize / 2f)), transform.position.y, transform.position.z);
+                    }
+
+                    dropBox.localScale = new Vector3(distance, 1f, transform.localScale.z);
+
+                    dropBox.GetComponent<MeshRenderer>().material.color = gm.cubeColor;
+
+                    dropBox.gameObject.SetActive(true);
+                }
+
+                if (gm.combo == 7)
+                {
+                    gm.combo = 0;
+                    SpawnBonusCube(gm.bonusPrefab);
+                }
+                else
+                    SpawnNewCube(gm.yPrefab);
             }
             else
             {
-                float distance = CalDistance(transform.position.z, prevCube.position.z);
-                if (gm.isGod || distance < 0.35f)
+                float distance = CalDistance(transform.localPosition.z, prevCube.localPosition.z);
+                if (gm.isGod)
                     distance = 0;
+
+                if (distance < 0.35f || gm.isGod)
+                {
+                    distance = 0;
+                    Handheld.Vibrate();
+                    gm.combo += 1;
+                }
+                else
+                {
+                    gm.combo = 0;
+                }
 
                 if (distance > transform.localScale.x)
                 {
                     rb.useGravity = true;
+                    rb.isKinematic = false;
+                    gameObject.layer = LayerMask.NameToLayer("DropBox");
                     gm.EndGame();
+                    gameObject.isStatic = true;
                     enabled = false;
                     return;
                 }
-                Debug.Log(distance);
+
                 float newXSize = transform.localScale.x - distance;
 
-                transform.localScale = new Vector3(newXSize, 1, transform.localScale.z);
+                transform.localScale = new Vector3(newXSize, 1f, transform.localScale.z);
 
                 if (distance == 0)
-                    transform.position = new Vector3(prevCube.position.x, transform.position.y, prevCube.position.z);
+                    transform.localPosition = new Vector3(prevCube.localPosition.x, transform.localPosition.y, prevCube.localPosition.z);
                 else
-                    transform.position = new Vector3(transform.position.x, transform.position.y, (transform.position.z + prevCube.position.z) / 2);
+                    transform.localPosition = new Vector3(transform.localPosition.x, transform.localPosition.y, (transform.localPosition.z + prevCube.localPosition.z) / 2f);
 
-                SpawnNewCube(gm.xPrefab);
+                if (distance != 0)
+                {
+                    Transform dropBox = pooler.GetFromPool(CubeType.dropCube);
+
+                    dropBox.eulerAngles = Vector3.zero;
+
+                    if (transform.position.z > prevCube.position.z)
+                    {
+                        //Debug.Log($"{transform.position.z} \n {prevCube.position.z} \n {distance + (newXSize / 2)}");
+                        dropBox.position = new Vector3(transform.position.x, transform.position.y, transform.position.z + (distance + (newXSize / 2f)));
+                    }
+                    else
+                    {
+                        //Debug.Log($"{transform.position.z} \n {prevCube.position.z} \n {distance + (newXSize / 2)}");
+                        dropBox.position = new Vector3(transform.position.x, transform.position.y, transform.position.z - (distance + (newXSize / 2f)));
+                    }
+
+                    dropBox.localScale = new Vector3(transform.localScale.z, 1f, distance);
+
+                    dropBox.GetComponent<MeshRenderer>().material.color = gm.cubeColor;
+
+                    dropBox.gameObject.SetActive(true);
+                }
+
+                if (gm.combo == 7)
+                {
+                    gm.combo = 0;
+                    SpawnBonusCube(gm.bonusPrefab);
+                }
+                else
+                    SpawnNewCube(gm.xPrefab);
             }
             gm.LevelUp();
+            gameObject.layer = LayerMask.NameToLayer("DropBox");
+            rb.constraints = RigidbodyConstraints.FreezeAll;
             enabled = false;
+        }
+    }
+
+    private void OnTriggerEnter(Collider col)
+    {
+        if (col.gameObject.CompareTag("Deactivator"))
+        {
+            gameObject.SetActive(false);
         }
     }
 
@@ -102,7 +206,7 @@ public class CubeBehaviour : MonoBehaviour
             if (isLeft)
             {
                 transform.Translate(Vector3.left * speed * Time.deltaTime);
-                if (transform.position.x < pointA.x)
+                if (transform.localPosition.x < pointA.x)
                 {
                     isLeft = false;
                 }
@@ -110,7 +214,7 @@ public class CubeBehaviour : MonoBehaviour
             else
             {
                 transform.Translate(Vector3.right * speed * Time.deltaTime);
-                if (transform.position.x > pointB.x)
+                if (transform.localPosition.x > pointB.x)
                 {
                     isLeft = true;
                 }
@@ -121,7 +225,7 @@ public class CubeBehaviour : MonoBehaviour
             if (isLeft)
             {
                 transform.Translate(Vector3.left * speed * Time.deltaTime);
-                if (transform.position.z > pointA.z)
+                if (transform.localPosition.z > pointA.z)
                 {
                     isLeft = false;
                 }
@@ -129,7 +233,7 @@ public class CubeBehaviour : MonoBehaviour
             else
             {
                 transform.Translate(Vector3.right * speed * Time.deltaTime);
-                if (transform.position.z < pointB.z)
+                if (transform.localPosition.z < pointB.z)
                 {
                     isLeft = true;
                 }
@@ -138,7 +242,7 @@ public class CubeBehaviour : MonoBehaviour
     }
 
     /// <summary>
-    /// Calculate real distance between a and b, 
+    /// Calculate positive distance between a and b, 
     /// a is current cube x/z position, b is previous cube x/z position.
     /// </summary>
     /// <param name="a"></param>
@@ -188,18 +292,39 @@ public class CubeBehaviour : MonoBehaviour
         cube.transform.localScale = new Vector3(transform.localScale.z, transform.localScale.y, transform.localScale.x);
 
         if (isX)
-            cube.transform.position = new Vector3(transform.position.x, transform.position.y + 1, cube.transform.position.z);
+            cube.transform.localPosition = new Vector3(transform.localPosition.x, transform.localPosition.y + 1f, cube.transform.localPosition.z);
         else
-            cube.transform.position = new Vector3(cube.transform.position.x, transform.position.y + 1, transform.position.z);
+            cube.transform.localPosition = new Vector3(cube.transform.localPosition.x, transform.localPosition.y + 1f, transform.localPosition.z);
 
         gm.UpdateColor();
         cube.GetComponent<MeshRenderer>().material.color = gm.cubeColor;
         cube.GetComponent<CubeBehaviour>().prevCube = transform;
     }
 
-    private void Resetter()
+    private void SpawnBonusCube(GameObject bonusCube)
     {
-        rb.useGravity = false;
-        enabled = true;
+        GameObject cube = Instantiate(bonusCube, transform.parent);
+        cube.transform.localScale = transform.localScale;
+        cube.transform.rotation = transform.rotation;
+        cube.transform.position = new Vector3(0f, transform.position.y + 1f, 0f);
+        gm.UpdateColor();
+        cube.GetComponent<MeshRenderer>().material.color = gm.cubeColor;
+    }
+
+    public void Drop()
+    {
+        gameObject.layer = LayerMask.NameToLayer("DropBox");
+        rb.isKinematic = false;
+        rb.useGravity = true;
+        enabled = false;
+    }
+
+    private bool IsPointerOverUIObject()
+    {
+        PointerEventData eventCurPos = new PointerEventData(EventSystem.current);
+        eventCurPos.position = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
+        List<RaycastResult> results = new List<RaycastResult>();
+        EventSystem.current.RaycastAll(eventCurPos, results);
+        return results.Count > 0;
     }
 }
