@@ -1,18 +1,22 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Cinemachine;
+using RDG;
 
 public class BonusCube : MonoBehaviour
 {
     [SerializeField] private float bonusTime;
 
     private GameManager gm;
+    private CinemachineImpulseSource impSource;
     private float timer;
     private bool isBonus = true;
 
     private void Awake() 
     {
         gm = FindObjectOfType<GameManager>();
+        impSource = FindObjectOfType<CinemachineImpulseSource>();
     }
 
     private void Update()
@@ -23,17 +27,31 @@ public class BonusCube : MonoBehaviour
             if (timer >= bonusTime)
             {
                 isBonus = false;
+                gm.Clicker.gameObject.SetActive(false);
+                gm.BonusBar.gameObject.SetActive(false);
+                gm.BonusBar.fillAmount = 1;
                 MeshRenderer meshRenderer = gameObject.GetComponent<MeshRenderer>();
                 meshRenderer.material = gm.baseMat;
                 meshRenderer.material.color = gm.cubeColor;
                 SpawnNewCube(gm.xPrefab);
                 enabled = false;
             }
+            else if (timer < bonusTime)
+            {
+                if (!gm.BonusBar.gameObject.activeInHierarchy)
+                {
+                    gm.Clicker.gameObject.SetActive(true);
+                    gm.BonusBar.gameObject.SetActive(true);
+                }
+
+                gm.BonusBar.fillAmount -= 1.0f / bonusTime * Time.deltaTime;
+            }
         }
 
         if (isBonus && Input.GetMouseButtonDown(0) && (transform.localScale.x < 10 || transform.localScale.z < 10 ))
         {
-            Handheld.Vibrate();
+            Vibration.Vibrate(100);
+            impSource.GenerateImpulse();
 
             if (transform.localScale.x < 10)
             {

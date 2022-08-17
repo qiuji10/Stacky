@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using RDG;
 
 public class CubeBehaviour : MonoBehaviour
 {
@@ -26,7 +27,7 @@ public class CubeBehaviour : MonoBehaviour
     private void OnEnable()
     {
         if (gm.IsSpeeded)
-            speed = 27;
+            speed = 25;
         else
             speed = 20;
     }
@@ -55,7 +56,7 @@ public class CubeBehaviour : MonoBehaviour
                 if (distance < 0.35f || gm.isGod)
                 {
                     distance = 0;
-                    Handheld.Vibrate();
+                    Vibration.Vibrate(10);
                     gm.combo += 1;
                 }
                 else
@@ -124,7 +125,7 @@ public class CubeBehaviour : MonoBehaviour
                 if (distance < 0.35f || gm.isGod)
                 {
                     distance = 0;
-                    Handheld.Vibrate();
+                    Vibration.Vibrate(10);
                     gm.combo += 1;
                 }
                 else

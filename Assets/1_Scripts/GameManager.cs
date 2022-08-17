@@ -24,10 +24,14 @@ public class GameManager : MonoBehaviour
 	[Header("Game Base Settings")]
 	public int level;
 	public int combo;
+	private bool breakHighScore;
 	[SerializeField] private int rotationLevel;
 	[SerializeField] private bool isSpeeded;
+	[SerializeField] private int enableSpeedLvl;
+	[SerializeField] private int disableSpeedLvl;
 	[SerializeField] private float sceneTransitionTime;
 	public bool IsSpeeded { get { return isSpeeded; } }
+	private Database database;
 
 	[Header("Rotation Phase Settings")]
 	[SerializeField] private bool rotatePhase;
@@ -67,8 +71,12 @@ public class GameManager : MonoBehaviour
 
 	[Header("UI Settings")]
 	[SerializeField] private TMP_Text scoreText;
+	[SerializeField] private TMP_Text endText;
 	[SerializeField] private GameObject pauseUI;
-	[SerializeField] private GameObject tapText;
+	[SerializeField] private GameObject clickIndicator;
+	[SerializeField] private Image bonusBar;
+	public GameObject Clicker { get { return clickIndicator; } set { clickIndicator = value; } }
+	public Image BonusBar { get { return bonusBar; } set { bonusBar = value; } }
 
 	[Header("Buttons Settings")]
 	[SerializeField] private Button startGameButton;
@@ -80,10 +88,12 @@ public class GameManager : MonoBehaviour
     private void Awake()
     {
         targetGrp = FindObjectOfType<CinemachineTargetGroup>();
+		database = GetComponent<Database>();
 	}
 
     private void Start()
     {
+		Application.targetFrameRate = 300;
 		StartCoroutine(IntroFade());
 		StartCoroutine(SetTransCamPriority());
 
@@ -144,7 +154,7 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-		if (rotatePhase)
+		if (rotatePhase && Time.timeScale == 1)
         {
 			if (changeRotationDir)
             {
@@ -268,6 +278,13 @@ public class GameManager : MonoBehaviour
 		level++;
 		scoreText.text = level.ToString();
 
+		if (level > database.playerData.highscore)
+        {
+			breakHighScore = true;
+			database.playerData.highscore = level;
+			database.SaveGame();
+        }
+
 		Vector3 pos = camObj.transform.position;
 		camObj.transform.position = new Vector3(pos.x, pos.y + camHeightPerBlock, pos.z);
 		vcam.transform.position = new Vector3(18.5f, vcam.transform.position.y + camHeightPerBlock, -18.5f);
@@ -292,12 +309,15 @@ public class GameManager : MonoBehaviour
 		}
 
 		// Every 25 levels change cube moving speed
-		if (level % 25 == 0)
+		if (level % enableSpeedLvl == 0)
         {
 			isSpeeded = !isSpeeded;
 		}
 
-		
+		if (isSpeeded && level % disableSpeedLvl == 0)
+        {
+			isSpeeded = !isSpeeded;
+		}
 	}
 
 	public void GodMode()
@@ -308,6 +328,12 @@ public class GameManager : MonoBehaviour
 	public void EndGame()
     {
 		endGame = true;
+
+		if (breakHighScore)
+        {
+			endText.text = $"New Highscore!\n\nTap to Menu";
+		}
+
 		nextGameButton.interactable = true;
 		targetGrp.AddMember(baseObj.transform, 1, 0);
 		colorData.bottomColor = bottomColor;
@@ -319,7 +345,8 @@ public class GameManager : MonoBehaviour
 	public void NextGame()
     {
 		vcam2.Priority = 11;
-		StartCoroutine(ReloadScene(true));
+		StartCoroutine(GameplayFadeOff());
+		StartCoroutine(ReloadScene(false));
 	}
 
 	public IEnumerator MenuFade(bool fadeToGame)
@@ -350,8 +377,19 @@ public class GameManager : MonoBehaviour
 
 			gameplayCanvas.gameObject.SetActive(false);
 		}
-		
     }
+
+	public IEnumerator GameplayFadeOff()
+    {
+		while (gameplayCanvas.alpha > 0)
+		{
+			gameplayCanvas.alpha -= menuFadeSpeed;
+			menuCanvas.alpha += menuFadeSpeed;
+			yield return null;
+		}
+
+		gameplayCanvas.gameObject.SetActive(false);
+	}
 
 	public IEnumerator IntroFade()
     {
@@ -386,9 +424,7 @@ public class GameManager : MonoBehaviour
 		vcam2.Priority = 11;
 		colorData.bottomColor = bottomColor;
 		colorData.topColor = topColor;
-		//StartCoroutine(MenuFade(false));
 		StartCoroutine(ReloadScene(false));
-
 	}
 
 	private IEnumerator ReloadScene(bool needFade)
