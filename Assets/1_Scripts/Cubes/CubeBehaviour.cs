@@ -65,6 +65,11 @@ public class CubeBehaviour : MonoBehaviour
                     return;
                 }
 
+                if (distance < 0.35f || gm.isGod)
+                {
+                    distance = 0;
+                }
+
                 float newXSize =  transform.localScale.x - distance;
 
                 transform.localScale = new Vector3(newXSize, 1, transform.localScale.z);
@@ -100,7 +105,6 @@ public class CubeBehaviour : MonoBehaviour
 
                 if (distance < 0.35f || gm.isGod)
                 {
-                    distance = 0;
                     Vibration.Vibrate(10);
                     gm.EnableComboParticle(transform);
                     gm.combo += 1;
@@ -133,6 +137,11 @@ public class CubeBehaviour : MonoBehaviour
                     gameObject.isStatic = true;
                     enabled = false;
                     return;
+                }
+
+                if (distance < 0.35f || gm.isGod)
+                {
+                    distance = 0;
                 }
 
                 float newXSize = transform.localScale.x - distance;
@@ -170,7 +179,6 @@ public class CubeBehaviour : MonoBehaviour
 
                 if (distance < 0.35f || gm.isGod)
                 {
-                    distance = 0;
                     Vibration.Vibrate(10);
                     gm.EnableComboParticle(transform);
                     gm.combo += 1;
