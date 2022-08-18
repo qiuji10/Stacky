@@ -314,12 +314,12 @@ public class GameManager : MonoBehaviour
 		}
 
 		// Speed Up Rotation After lvl 40
-		if (level == 40)
+		if (level == 80)
 		{
 			rotationSpeed *= 5;
 		}
 
-		// Every 25 levels change cube moving speed
+		// Every 10 or 5 levels change cube moving speed
 		if (level % enableSpeedLvl == 0)
         {
 			isSpeeded = !isSpeeded;
